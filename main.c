@@ -43,22 +43,40 @@ void recalculate_mouse_pos(GLFWwindow* window, double x, double y) {
 	mouse_y = 1.0 - (y - viewport_y) / viewport_size;
 }
 
-GLuint load_shader(const char* vs_path, const char* fs_path) {
+GLuint load_shaders(const char* vs_path, const char* fs_path) {
+
+	GLint success;
+	GLchar info[1024];
 
 	char* vs_src = read_all_text(vs_path);
 	GLuint vs = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vs, 1, (const GLchar*[]) { vs_src }, NULL);
 	glCompileShader(vs);
+	glGetShaderiv(vs, GL_COMPILE_STATUS, &success);
+	if (!success) {
+		glGetShaderInfoLog(vs, sizeof(info), NULL, info);
+		fprintf(stderr, "Vertex shader compilation error: %s\n", info);
+	}
 
 	char* fs_src = read_all_text(fs_path);
 	GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(fs, 1, (const GLchar*[]) { fs_src }, NULL);
 	glCompileShader(fs);
+        glGetShaderiv(fs, GL_COMPILE_STATUS, &success);
+	if (!success) {
+		glGetShaderInfoLog(fs, sizeof(info), NULL, info);
+		fprintf(stderr, "Fragment shader compilation error: %s\n", info);
+	}
 
 	GLuint shader = glCreateProgram();
 	glAttachShader(shader, vs);
 	glAttachShader(shader, fs);
 	glLinkProgram(shader);
+	glGetProgramiv(shader, GL_LINK_STATUS, &success);
+	if (!success) {
+		glGetProgramInfoLog(shader, sizeof(info), NULL, info);
+		fprintf(stderr, "Shader program linking error: %s\n", info);
+        }
 
 	glDeleteShader(vs);
 	glDeleteShader(fs);
@@ -70,7 +88,6 @@ GLuint load_shader(const char* vs_path, const char* fs_path) {
 }
 
 int main(void) {
-
 
 	glfwInit();
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
@@ -102,7 +119,7 @@ int main(void) {
 
 	const char* vs_path = "vert.glsl";
 	const char* fs_path = "frag.glsl";
-	GLuint shader = load_shader(vs_path, fs_path);
+	GLuint shader = load_shaders(vs_path, fs_path);
 
 	glUseProgram(shader);
 	glBindVertexArray(VAO);
@@ -117,11 +134,12 @@ int main(void) {
 		}
 
 		if (can_reload && glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+			printf("Reloading shaders...\n");
 			glDeleteProgram(shader);
-			shader = load_shader(vs_path, fs_path);
+			shader = load_shaders(vs_path, fs_path);
 			glUseProgram(shader);
-			printf("Shader reloaded\n");
 			can_reload = 0;
+			glfwSetTime(0.0);
 		}
 		if (!can_reload && glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) {
 			can_reload = 1;
