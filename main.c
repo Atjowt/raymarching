@@ -2,6 +2,9 @@
 #include <GLFW/glfw3.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <time.h>
 
 static float mouse_x, mouse_y;
 static int viewport_x, viewport_y;
@@ -123,9 +126,16 @@ int main(void) {
 
 	glUseProgram(shader);
 	glBindVertexArray(VAO);
+
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 
-	int can_reload = 1;
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	double last_reload = glfwGetTime();
+	struct stat file_stat;
+	stat(fs_path, &file_stat);
+	time_t last_mod_time = file_stat.st_mtime;
 
 	while (!glfwWindowShouldClose(window)) {
 
@@ -133,16 +143,21 @@ int main(void) {
 			glfwSetWindowShouldClose(window, GLFW_TRUE);
 		}
 
-		if (can_reload && glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
-			printf("Reloading shaders...\n");
-			glDeleteProgram(shader);
-			shader = load_shaders(vs_path, fs_path);
-			glUseProgram(shader);
-			can_reload = 0;
-			glfwSetTime(0.0);
+		if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+			last_reload = 0.0;
 		}
-		if (!can_reload && glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) {
-			can_reload = 1;
+
+		if (glfwGetTime() - last_reload >= 0.5) {
+			stat(fs_path, &file_stat);
+			int fs_file_changed = file_stat.st_mtime != last_mod_time;
+			if (fs_file_changed) {
+				last_mod_time = file_stat.st_mtime;
+				printf("Change detected, reloading shaders...\n");
+				glDeleteProgram(shader);
+				shader = load_shaders(vs_path, fs_path);
+				glUseProgram(shader);
+				glfwSetTime(0.0);
+			}
 		}
 
 		float time = glfwGetTime();
