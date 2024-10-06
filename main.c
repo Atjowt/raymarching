@@ -6,22 +6,16 @@
 #include <unistd.h>
 #include <time.h>
 
-#ifndef N_VERTEX_SHADERS
-#define N_VERTEX_SHADERS 0
-#error "Must provide number of vertex shader files!"
-#endif
-
-#ifndef VERTEX_SHADERS
+#ifdef VERTEX_SHADERS
+#define N_VERTEX_SHADERS (sizeof((const char*[])VERTEX_SHADERS) / sizeof(char*))
+#else
 #define VERTEX_SHADERS {""}
 #error "Must provide at least one vertex shader file!"
 #endif
 
-#ifndef N_FRAGMENT_SHADERS
-#define N_FRAGMENT_SHADERS 0
-#error "Must provide number of fragment shader files!"
-#endif
-
-#ifndef FRAGMENT_SHADERS
+#ifdef FRAGMENT_SHADERS
+#define N_FRAGMENT_SHADERS (sizeof((const char*[])FRAGMENT_SHADERS) / sizeof(char*))
+#else
 #define FRAGMENT_SHADERS {""}
 #error "Must provide at least one fragment shader file!"
 #endif
